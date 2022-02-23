@@ -1,4 +1,5 @@
 from os import walk
+import sys
 
 import paho.mqtt.client as mqtt
 
@@ -37,8 +38,13 @@ def start_producer(q):
         # open actual file, and queue each roads data
         with open(f"./sample_data/{filename}", "r") as f:
             data = json.loads(f.read())
-            for road in data:
-                q.put(road)
+            for road_data in data:
+                road_name = road_data["road_name"]
+                for segment in road_data["segments"]:
+                    # construct a payload to pass to publishers
+                    topic = f"{road_name}/{segment['cross_road']}"
+                    payload = {"topic": topic, "data": segment}
+                    q.put(payload)
 
         # TODO: assert 50 second passing
         # simulate passing of time
@@ -57,9 +63,11 @@ def process_queue_items(p, q, client):
     print(p, "starting")
     # keep processing data from the queue when available
     while True:
-        message = str(q.get())
-        print(f"{p} -> {message[:100]} ..")
-        client.publish("topic1", message)
+        payload = q.get()
+        topic = payload["topic"]
+        data = str(payload["data"])
+        print(f"{p} -> {topic} -> {data[:20]}")
+        client.publish(topic, data)
 
     print(p, "done")
 
@@ -97,7 +105,7 @@ def start_publishers(q, n: int):
 
 if __name__ == "__main__":
 
-    PUBLISHER_AMOUNT = 10
+    PUBLISHER_AMOUNT = int(sys.argv[1])
 
     ctx = mp.get_context("spawn")
     q = ctx.Queue()
