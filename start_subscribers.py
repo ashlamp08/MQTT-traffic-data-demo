@@ -1,46 +1,59 @@
 import paho.mqtt.client as mqtt
 from db_connection import DBConnection
 from typing import List
+import sys
 
 
-broker_address = "0.0.0.0"
-subscriber_amount = 1
-subscribers: List[mqtt.Client] = []
+def main(topics: list):
+    """Start a subscriber and subcsribe to given topic
 
-
-def on_message(client: mqtt.Client, userdata, message):
-    """A custom callback for processing recieved messages"""
-
-    client_id = str(client._client_id.decode("utf-8"))
-    message = str(message.payload.decode("utf-8"))
-
-    print(f"{client_id} recieved: {message[:100]} .. ")
-
-    # log message as recieved
-    """
-    with DBConnection() as conn:
-        conn.log_message(int(message), 0, 1)
+    Args:
+        topic_name (str): The name of the topic to subscribe to
     """
 
+    broker_address = "0.0.0.0"
+    subscribers: List[mqtt.Client] = []
 
-print(f"Create, connect, subscribe {subscriber_amount} subscribers")
-for i in range(subscriber_amount):
+    def on_message(client: mqtt.Client, userdata, message):
+        """A custom callback for processing recieved messages"""
 
-    client = mqtt.Client(f"S{i}")
-    client.connect(broker_address)
-    client.loop_start()
-    client.subscribe("topic1")
-    client.on_message = on_message
-    subscribers.append(client)
+        client_id = str(client._client_id.decode("utf-8"))
+        message = str(message.payload.decode("utf-8"))
 
+        print(f"{client_id} recieved: {message[:100]} .. ")
 
-# keep loop open until keybord interrupt
-try:
-    while True:
+        # log message as recieved
+        """
+        with DBConnection() as conn:
+            conn.log_message(int(message), 0, 1)
+        """
+
+    for i, topic_name in enumerate(topics):
+        print(f"Creating subscriber to topic [{topic_name}]")
+        client = mqtt.Client(f"S{i}")
+        client.connect(broker_address)
+        client.loop_start()
+        client.subscribe(topic_name)
+        client.on_message = on_message
+        subscribers.append(client)
+
+    # keep loop open until keybord interrupt
+    print("")
+    try:
+        while True:
+            pass
+    except KeyboardInterrupt:
         pass
-except KeyboardInterrupt:
-    pass
 
-print("stop subscribers")
-for s in subscribers:
-    s.loop_stop()
+    print("stop subscriber")
+    for s in subscribers:
+        s.loop_stop()
+
+
+if __name__ == "__main__":
+    # pass first argument (topic to subscribe to)
+    topics = []
+    for topic_name in sys.argv[1:]:
+        topics.append(topic_name)
+
+    main(topics)
