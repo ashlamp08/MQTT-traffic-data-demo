@@ -1,11 +1,12 @@
 import paho.mqtt.client as mqtt
 from db_connection import DBConnection
-from typing import List
+from typing import List, Set
 import sys
 import json
+import random
 
 
-def main(topics: list):
+def main(topics: list, subscriber_count, randomized_unsubscribe):
     """Start a subscriber and subcsribe to given topic
 
     Args:
@@ -30,14 +31,19 @@ def main(topics: list):
             conn.log_message(data_json["timestamp"], json.dumps(data_json["road_name"]), json.dumps(data_json["segment"]))
         
 
-    for i, topic_name in enumerate(topics):
+    for i in range(subscriber_count):
+        topic_name = random.choice(topics)
         print(f"Creating subscriber to topic [{topic_name}]")
         client = mqtt.Client(f"S{i}")
         client.connect(broker_address)
+        client.on_message = on_message
         client.loop_start()
         client.subscribe(topic_name)
-        client.on_message = on_message
         subscribers.append(client)
+
+    if randomized_unsubscribe:
+        # TODO implement randomized unsubscribe
+        pass
 
     # keep loop open until keybord interrupt
     print("")
@@ -53,9 +59,14 @@ def main(topics: list):
 
 
 if __name__ == "__main__":
-    # pass first argument (topic to subscribe to)
     topics = []
-    for topic_name in sys.argv[1:]:
-        topics.append(topic_name)
+    SUBSCRIBER_AMOUNT = int(sys.argv[1])
 
-    main(topics)
+    # Find all the possible roads
+    with open(f"./sample_data/1577484032.json", "r") as f:
+        data = json.loads(f.read())
+        for road_data in data:
+            road_name = road_data["road_name"]
+            topics.append(f"{road_name}/#")
+
+    main(topics, SUBSCRIBER_AMOUNT, False)
