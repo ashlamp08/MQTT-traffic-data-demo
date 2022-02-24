@@ -4,17 +4,14 @@ from typing import List, Set
 import sys
 import json
 import random
+import time
 
 
-def main(topics: list, subscriber_count, randomized_unsubscribe):
-    """Start a subscriber and subcsribe to given topic
-
-    Args:
-        topic_name (str): The name of the topic to subscribe to
-    """
+def main(topics: list, subscriber_count, max_subscribed_topics, randomized_unsubscribe):
+    """Start subscribers"""
 
     broker_address = "0.0.0.0"
-    subscribers: List[mqtt.Client] = []
+    subscribers = {}
 
     def on_message(client: mqtt.Client, userdata, message):
         """A custom callback for processing recieved messages"""
@@ -33,28 +30,58 @@ def main(topics: list, subscriber_count, randomized_unsubscribe):
 
     for i in range(subscriber_count):
         topic_name = random.choice(topics)
-        print(f"Creating subscriber to topic [{topic_name}]")
         client = mqtt.Client(f"S{i}")
         client.connect(broker_address)
         client.on_message = on_message
         client.loop_start()
-        client.subscribe(topic_name)
-        subscribers.append(client)
+        subscribed_topics = []
+        for i, topic_name in enumerate(random.choices(topics, k=max_subscribed_topics)):
+            client.subscribe(topic_name)
+            subscribed_topics.append(topic_name)
+            print(f"S{i} subscribe to topic [{topic_name}]")
+        subscribers[client] = subscribed_topics
 
     if randomized_unsubscribe:
-        # TODO implement randomized unsubscribe
-        pass
-
-    # keep loop open until keybord interrupt
-    print("")
-    try:
-        while True:
+        # Start randomized unsubscribtions and subscriptions
+        print("Start randomized unsubscribtions and subscriptions")
+        try:
+            while True:
+                time.sleep(5)
+                # choose a random client 
+                client, subscribed_topics = random.choice(list(subscribers.items()))
+                
+                # choose an action
+                if random.randrange(10)%2 == 0:
+                    # UNSUBSCRIBE from a random topic
+                    topic_name = random.choice(subscribed_topics)
+                    client.unsubscribe(topic_name)
+                    subscribed_topics.remove(topic_name)
+                    subscribers[client] = subscribed_topics
+                    print(f"{client._client_id.decode('utf-8')} unsubscribed from topic [{topic_name}]")
+                else:
+                    # SUBSCRIBE to a random topic
+                    topic_name = random.choice(topics)
+                    if topic_name not in subscribed_topics:
+                        client.subscribe(topic_name)
+                        subscribed_topics.append(topic_name)
+                        subscribers[client] = subscribed_topics
+                        print(f"{client._client_id.decode('utf-8')} subscribed to topic [{topic_name}]")
+                    else:
+                        print(f"{client._client_id.decode('utf-8')} not subscribing to duplicate topic [{topic_name}]")
+        except KeyboardInterrupt:
+            print("Stop randomized unsubscribtions and subscriptions")
             pass
-    except KeyboardInterrupt:
-        pass
+    else:
+        # keep loop open until keybord interrupt
+        print("")
+        try:
+            while True:
+                pass
+        except KeyboardInterrupt:
+            pass
 
     print("stop subscriber")
-    for s in subscribers:
+    for s in subscribers.keys:
         s.loop_stop()
 
 
@@ -69,4 +96,4 @@ if __name__ == "__main__":
             road_name = road_data["road_name"]
             topics.append(f"{road_name}/#")
 
-    main(topics, SUBSCRIBER_AMOUNT, False)
+    main(topics, SUBSCRIBER_AMOUNT, 3, True)
