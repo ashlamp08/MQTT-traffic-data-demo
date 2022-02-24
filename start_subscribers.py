@@ -2,6 +2,7 @@ import paho.mqtt.client as mqtt
 from db_connection import DBConnection
 from typing import List
 import sys
+import json
 
 
 def main(topics: list):
@@ -18,15 +19,16 @@ def main(topics: list):
         """A custom callback for processing recieved messages"""
 
         client_id = str(client._client_id.decode("utf-8"))
-        message = str(message.payload.decode("utf-8"))
+        data = str(message.payload.decode("utf-8"))
 
-        print(f"{client_id} recieved: {message[:100]} .. ")
+        data_json = json.loads(data)
+
+        print(f"{client_id} recieved: {data[:100]} .. ")
 
         # log message as recieved
-        """
         with DBConnection() as conn:
-            conn.log_message(int(message), 0, 1)
-        """
+            conn.log_message(data_json["timestamp"], json.dumps(data_json["road_name"]), json.dumps(data_json["segment"]))
+        
 
     for i, topic_name in enumerate(topics):
         print(f"Creating subscriber to topic [{topic_name}]")
