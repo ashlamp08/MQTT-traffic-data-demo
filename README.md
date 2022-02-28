@@ -8,7 +8,7 @@ mosquitto
 ```
 
 second (bridge messages here)
-````
+```
 mosquitto -c bridge1.conf
 ```
 
