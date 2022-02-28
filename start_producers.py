@@ -74,10 +74,12 @@ def process_queue_items(p, q, client):
     while True:
         payload = q.get()
         topic = payload["topic"]
+        # log the time when the message is produced
+        payload["data"]["produced_time"] = time.time()
+        
         data = json.dumps(payload["data"])
-        print(f"{p} -> {topic} -> {data[:20]}")
+        # print(f"{p} -> {topic} -> {data[:20]}")
         client.publish(topic, data)
-
 
 def start_publishers(q, n: int):
     """Start the publishers (consumers) of traffic data
