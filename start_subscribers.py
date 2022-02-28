@@ -26,13 +26,18 @@ def main(topics: list, subscriber_count, max_subscribed_topics, randomized_unsub
 
         # log message as recieved
         with DBConnection() as conn:
-            conn.log_message(data_json["timestamp"], json.dumps(data_json["road_name"]), json.dumps(data_json["segment"]), json.dumps(data_json["produced_time"]), consumed_time)
-        
+            conn.log_message(
+                data_json["timestamp"],
+                json.dumps(data_json["road_name"]),
+                json.dumps(data_json["segment"]),
+                json.dumps(data_json["produced_time"]),
+                consumed_time,
+            )
 
     for i in range(subscriber_count):
         topic_name = random.choice(topics)
         client = mqtt.Client(f"S{i}")
-        client.connect(broker_address)
+        client.connect(broker_address, port=1888)
         client.on_message = on_message
         client.loop_start()
         subscribed_topics = []
@@ -48,18 +53,20 @@ def main(topics: list, subscriber_count, max_subscribed_topics, randomized_unsub
         try:
             while True:
                 time.sleep(5)
-                # choose a random client 
+                # choose a random client
                 client, subscribed_topics = random.choice(list(subscribers.items()))
-                
+
                 # choose an action
-                if random.randrange(10)%2 == 0:
+                if random.randrange(10) % 2 == 0:
                     # UNSUBSCRIBE from a random topic
                     try:
                         topic_name = random.choice(subscribed_topics)
                         client.unsubscribe(topic_name)
                         subscribed_topics.remove(topic_name)
                         subscribers[client] = subscribed_topics
-                        print(f"{client._client_id.decode('utf-8')} unsubscribed from topic [{topic_name}]")
+                        print(
+                            f"{client._client_id.decode('utf-8')} unsubscribed from topic [{topic_name}]"
+                        )
                     except:
                         pass
                 else:
@@ -69,9 +76,13 @@ def main(topics: list, subscriber_count, max_subscribed_topics, randomized_unsub
                         client.subscribe(topic_name)
                         subscribed_topics.append(topic_name)
                         subscribers[client] = subscribed_topics
-                        print(f"{client._client_id.decode('utf-8')} subscribed to topic [{topic_name}]")
+                        print(
+                            f"{client._client_id.decode('utf-8')} subscribed to topic [{topic_name}]"
+                        )
                     else:
-                        print(f"{client._client_id.decode('utf-8')} not subscribing to duplicate topic [{topic_name}]")
+                        print(
+                            f"{client._client_id.decode('utf-8')} not subscribing to duplicate topic [{topic_name}]"
+                        )
         except KeyboardInterrupt:
             print("Stop randomized unsubscribtions and subscriptions")
             pass
