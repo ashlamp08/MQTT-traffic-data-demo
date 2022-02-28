@@ -44,7 +44,14 @@ def start_producer(q):
                 for segment in road_data["segments"]:
                     # construct a payload to pass to publishers
                     topic = f"{road_name}/{segment['cross_road']}"
-                    payload = {"topic": topic, "data": {"timestamp": timestamp, "road_name": road_name, "segment": segment}}
+                    payload = {
+                        "topic": topic,
+                        "data": {
+                            "timestamp": timestamp,
+                            "road_name": road_name,
+                            "segment": segment,
+                        },
+                    }
                     q.put(payload)
 
         # TODO: assert 50 second passing
@@ -64,19 +71,12 @@ def process_queue_items(p, q, client):
     print(p, "starting")
     # keep processing data from the queue when available
 
-    is_data_incoming = True
-    while is_data_incoming:
-        try:
-            payload = q.get(True, 12)
-            topic = payload["topic"]
-            data = json.dumps(payload["data"])
-            print(f"{p} -> {topic} -> {data[:20]}")
-            client.publish(topic, data)
-        except:
-            print(f"{p} -> No more data")
-            is_data_incoming = False
-            
-    print(p, "done")
+    while True:
+        payload = q.get()
+        topic = payload["topic"]
+        data = json.dumps(payload["data"])
+        print(f"{p} -> {topic} -> {data[:20]}")
+        client.publish(topic, data)
 
 
 def start_publishers(q, n: int):
