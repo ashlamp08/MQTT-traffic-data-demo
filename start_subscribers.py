@@ -15,6 +15,7 @@ def main(topics: list, subscriber_count, max_subscribed_topics, randomized_unsub
 
     def on_message(client: mqtt.Client, userdata, message):
         """A custom callback for processing recieved messages"""
+        consumed_time = time.time()
 
         client_id = str(client._client_id.decode("utf-8"))
         data = str(message.payload.decode("utf-8"))
@@ -25,7 +26,7 @@ def main(topics: list, subscriber_count, max_subscribed_topics, randomized_unsub
 
         # log message as recieved
         with DBConnection() as conn:
-            conn.log_message(data_json["timestamp"], json.dumps(data_json["road_name"]), json.dumps(data_json["segment"]))
+            conn.log_message(data_json["timestamp"], json.dumps(data_json["road_name"]), json.dumps(data_json["segment"]), json.dumps(data_json["produced_time"]), consumed_time)
         
 
     for i in range(subscriber_count):
@@ -53,11 +54,14 @@ def main(topics: list, subscriber_count, max_subscribed_topics, randomized_unsub
                 # choose an action
                 if random.randrange(10)%2 == 0:
                     # UNSUBSCRIBE from a random topic
-                    topic_name = random.choice(subscribed_topics)
-                    client.unsubscribe(topic_name)
-                    subscribed_topics.remove(topic_name)
-                    subscribers[client] = subscribed_topics
-                    print(f"{client._client_id.decode('utf-8')} unsubscribed from topic [{topic_name}]")
+                    try:
+                        topic_name = random.choice(subscribed_topics)
+                        client.unsubscribe(topic_name)
+                        subscribed_topics.remove(topic_name)
+                        subscribers[client] = subscribed_topics
+                        print(f"{client._client_id.decode('utf-8')} unsubscribed from topic [{topic_name}]")
+                    except:
+                        pass
                 else:
                     # SUBSCRIBE to a random topic
                     topic_name = random.choice(topics)
